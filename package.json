@@ -2,6 +2,7 @@
   "name": "3dgallery",
   "version": "0.1.0",
   "private": true,
+  "homepage": "https://jhasubhash.github.io/3dgallery",
   "dependencies": {
     "@google/model-viewer": "^1.10.0",
     "@react-three/drei": "^8.4.0",
@@ -26,8 +27,9 @@
     "build": "react-scripts build && cp build/index.html build/404.html",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
-    "predeploy": "npm run build",
-    "deploy": "gh-pages -b gallery -d build"
+    "predeploy": "yarn build",
+    "deploy": "gh-pages -b gallery -d build",
+    "build-localhost": "PUBLIC_URL=/ yarn build"
   },
   "eslintConfig": {
     "extends": [
