@@ -1,8 +1,8 @@
-import React, { Suspense } from "react";
+import React, { Suspense, useCallback, useRef } from "react";
 import styled from "styled-components";
-import { Canvas } from "@react-three/fiber";
-import { Environment, Loader, OrbitControls, useGLTF } from "@react-three/drei";
-import Model from "./Test";
+import { Canvas, useThree } from "@react-three/fiber";
+import ReactThreeCanvas from "./ReactThreeCanvas";
+import { Loader } from "@react-three/drei";
 //import Loader from "./Loader";
 //import testHdr from './assets/models/test.hdr'
 
@@ -16,21 +16,16 @@ const MainWrapper = styled.div`
 }*/
 
 function ReactThreeLoader() {
+  let canvasRef = useRef(null);
+
   return (
     <>
-      <Canvas shadows camera={{ position: [-10, 15, 15], fov: 50 }}>
-        <ambientLight intensity={0.1} />
-        <pointLight castShadow position={[10, 10, 10]} />
-        <Suspense fallback={null}>
-          <Environment files={"./assets/model/test.hdr"} preset={"night"} />
-          <Model />
-        </Suspense>
-        <OrbitControls
-          addEventListener={undefined}
-          hasEventListener={undefined}
-          removeEventListener={undefined}
-          dispatchEvent={undefined}
-        />
+      <Canvas
+        shadows
+        camera={{ position: [85, 15, 85], fov: 50, rotation: [0, 90, 0] }}
+        ref={canvasRef}
+      >
+        <ReactThreeCanvas />
       </Canvas>
       <Loader
         innerStyles={{
@@ -40,5 +35,8 @@ function ReactThreeLoader() {
     </>
   );
 }
+
+//<OrbitControls ref={controlRef} />
+//<PerspectiveCamera makeDefault position={[50, 20 + zOffset, 50]} />
 
 export default ReactThreeLoader;
