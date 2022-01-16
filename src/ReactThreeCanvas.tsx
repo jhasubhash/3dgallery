@@ -27,12 +27,14 @@ function ReactThreeCanvas() {
 
   const zOffset = 0.01;
   const objects: any[] = [];
+  const velocityVal = 400;
 
   let prevTime = performance.now();
   let time;
   let delta;
 
   const { camera } = useThree();
+
   let moveForward = false,
     moveBackward = false,
     moveLeft = false,
@@ -40,17 +42,20 @@ function ReactThreeCanvas() {
 
   let canJump = false;
 
-  const velocity = new THREE.Vector3();
-  const direction = new THREE.Vector3();
+  let velocity = new THREE.Vector3();
+  let direction = new THREE.Vector3();
 
   const raycaster = new THREE.Raycaster(
     new THREE.Vector3(),
-    new THREE.Vector3(1, 0, 1),
+    new THREE.Vector3(0, 0, -1),
     0,
-    10
+    2
   );
+  raycaster.camera = camera;
 
-  let lastMove;
+  const isMoving = () => {
+    return moveLeft || moveRight || moveForward || moveBackward;
+  };
 
   const moveCamera = () => {
     requestAnimationFrame(moveCamera);
@@ -59,6 +64,8 @@ function ReactThreeCanvas() {
     time = performance.now();
     delta = (time - prevTime) / 1000;
 
+    let oldDirection = direction;
+    let oldVelocity = velocity;
     velocity.x -= velocity.x * 10 * delta;
     velocity.z -= velocity.z * 10 * delta;
 
@@ -66,8 +73,9 @@ function ReactThreeCanvas() {
     direction.x = Number(moveLeft) - Number(moveRight);
     direction.normalize(); // this ensures consistent movements in all directions
 
-    if (moveForward || moveBackward) velocity.z -= direction.z * 400 * delta;
-    if (moveLeft || moveRight) velocity.x -= direction.x * 400 * delta;
+    if (moveForward || moveBackward)
+      velocity.z -= direction.z * velocityVal * delta;
+    if (moveLeft || moveRight) velocity.x -= direction.x * velocityVal * delta;
 
     prevTime = time;
     let fwdVal = velocity.z * delta;
@@ -79,10 +87,14 @@ function ReactThreeCanvas() {
     (controlRef.current as any).moveRight(-rightVal);
     (controlRef.current as any).moveForward(fwdVal);
     const intersections = raycaster.intersectObjects(planeRef.current, false);
-    if (intersections.length == 0) {
+    if (isMoving() && intersections.length == 0) {
       (controlRef.current as any).moveRight(rightVal);
       (controlRef.current as any).moveForward(-fwdVal);
+    } else {
+      direction = oldDirection;
+      velocity = oldVelocity;
     }
+    if (intersections.length) console.log("collided");
   };
 
   moveCamera();
@@ -154,20 +166,20 @@ function ReactThreeCanvas() {
           name={"ground"}
         />
         <Plane
-          args={[200, 200]}
-          position={[100, 100 + zOffset, 0]}
-          rotation={[0, Math.PI / 2, 0]}
+          args={[5, 200]}
+          rotation={[0, 2.5, Math.PI / 2]}
+          position={[0, zOffset, -50]}
           material={planeMaterial}
           receiveShadow={true}
           ref={(element) => ((planeRef as any).current[0] = element)}
         />
       </Suspense>
       <PointerLockControls
-        position={[0, 10, 0]}
+        position={[0, 15, 0]}
         ref={controlRef}
         camera={camera}
-        minPolarAngle={Math.PI / 2}
-        maxPolarAngle={Math.PI / 2}
+        minPolarAngle={Math.PI / 2 - 1}
+        maxPolarAngle={Math.PI / 2 + 1}
       />
     </>
   );

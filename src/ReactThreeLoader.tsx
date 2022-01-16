@@ -3,6 +3,7 @@ import styled from "styled-components";
 import { Canvas, useThree } from "@react-three/fiber";
 import ReactThreeCanvas from "./ReactThreeCanvas";
 import { Loader } from "@react-three/drei";
+import * as THREE from "three";
 //import Loader from "./Loader";
 //import testHdr from './assets/models/test.hdr'
 
@@ -17,14 +18,17 @@ const MainWrapper = styled.div`
 
 function ReactThreeLoader() {
   let canvasRef = useRef(null);
-
+  let camera = new THREE.PerspectiveCamera(
+    75,
+    window.innerWidth / window.innerHeight,
+    1,
+    1000
+  );
+  camera.position.y = 2;
+  camera.position.z = 20;
   return (
     <>
-      <Canvas
-        shadows
-        camera={{ position: [85, 15, 85], fov: 50, rotation: [0, 90, 0] }}
-        ref={canvasRef}
-      >
+      <Canvas shadows camera={camera} ref={canvasRef}>
         <ReactThreeCanvas />
       </Canvas>
       <Loader
