@@ -109,7 +109,11 @@ function ReactThreeCanvas() {
       var isIntersected = raycaster1.intersectObjects(scene.children, true);
       if (isIntersected) {
         console.log("Mesh clicked!");
-        console.log(isIntersected);
+        if (
+          isIntersected.length > 1 &&
+          (isIntersected[1].object as any).onTrigger
+        )
+          (isIntersected[1].object as any).onTrigger();
       }
     }
   }

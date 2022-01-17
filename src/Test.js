@@ -10,8 +10,7 @@ export default function Model({ ...props }) {
   const group = useRef();
   const { nodes, materials, animations } = useGLTF(test);
   const { actions } = useAnimations(animations, group);
-  console.log(actions);
-  window.action = actions;
+
   const toggle = () => {
     actions.CylinderAction.isRunning()
       ? actions.CylinderAction.stop()
@@ -33,7 +32,7 @@ export default function Model({ ...props }) {
         material={materials["Material.003"]}
         position={[0.78, 2.27, -0.77]}
         scale={[1, 2.36, 1]}
-        onClick={(e) => toggle()}
+        onTrigger={(e) => toggle()}
       />
     </group>
   );
