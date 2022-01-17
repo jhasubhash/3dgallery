@@ -1,4 +1,10 @@
-import React, { Suspense, useCallback, useRef, useState } from "react";
+import React, {
+  Suspense,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import {
   Environment,
   FirstPersonControls,
@@ -6,7 +12,10 @@ import {
   OrbitControls,
   PerspectiveCamera,
   Plane,
+  Point,
   PointerLockControls,
+  Points,
+  Sphere,
   useGLTF,
 } from "@react-three/drei";
 import Model from "./Test";
@@ -17,6 +26,11 @@ import * as THREE from "three";
 function ReactThreeCanvas() {
   let planeRef = useRef([]);
   let controlRef = useRef(null);
+  let pointerRef = useRef(null);
+  const [position, setPosition] = useState(new THREE.Vector3(0, 0, 0));
+  (window as any).pos = new THREE.Vector3(0, 0, 0);
+  let mousePos = { x: 0, y: 0 };
+
   let planeMaterial = new THREE.MeshPhongMaterial();
   planeMaterial.side = THREE.DoubleSide;
   planeMaterial.color = new THREE.Color("grey");
@@ -25,15 +39,19 @@ function ReactThreeCanvas() {
   groundMaterial.side = THREE.DoubleSide;
   groundMaterial.color = new THREE.Color("grey");
 
+  let pointerMaterial = new THREE.PointsMaterial();
+  pointerMaterial.side = THREE.BackSide;
+  pointerMaterial.color = new THREE.Color("yellow");
+
   const zOffset = 0.01;
   const objects: any[] = [];
-  const velocityVal = 400;
+  const velocityVal = 200;
 
   let prevTime = performance.now();
   let time;
   let delta;
 
-  const { camera } = useThree();
+  const { camera, mouse, scene } = useThree();
 
   let moveForward = false,
     moveBackward = false,
@@ -44,14 +62,75 @@ function ReactThreeCanvas() {
 
   let velocity = new THREE.Vector3();
   let direction = new THREE.Vector3();
+  let prevDirection = new THREE.Vector3(0, 1, 0);
 
   const raycaster = new THREE.Raycaster(
     new THREE.Vector3(),
     new THREE.Vector3(0, 0, -1),
     0,
-    2
+    1
   );
   raycaster.camera = camera;
+
+  /*var vec = new THREE.Vector3();
+  var pos = new THREE.Vector3();
+  document.addEventListener("mousemove", (event: any) => {
+    mousePos.x = (event.clientX / window.innerWidth) * 2 - 1;
+    mousePos.y = -(event.clientY / window.innerHeight) * 2 + 1;
+    vec.set(
+      (event.clientX / window.innerWidth) * 2 - 1,
+      -(event.clientY / window.innerHeight) * 2 + 1,
+      0.5
+    );
+    vec.unproject(camera);
+    vec.sub(camera.position).normalize();
+    var distance = -camera.position.z / vec.z;
+    pos.copy(camera.position).add(vec.multiplyScalar(distance));
+  });*/
+
+  let raycaster1 = new THREE.Raycaster();
+  function onMouseClick(event: any) {
+    if (
+      controlRef &&
+      controlRef.current &&
+      (controlRef.current as any).isLocked
+    ) {
+      let vec3 = (pointerRef.current as any).position.project(camera);
+      let vec = new THREE.Vector2(vec3.x, vec3.y);
+      raycaster1.setFromCamera(vec, camera);
+      /*scene.add(
+        new THREE.ArrowHelper(
+          raycaster1.ray.direction,
+          raycaster1.ray.origin,
+          300,
+          0xffffff
+        )
+      );*/
+      var isIntersected = raycaster1.intersectObjects(scene.children, true);
+      if (isIntersected) {
+        console.log("Mesh clicked!");
+        console.log(isIntersected);
+      }
+    }
+  }
+
+  useEffect(() => {
+    document.addEventListener("click", onMouseClick);
+    document.addEventListener("keydown", onKeyDown);
+    document.addEventListener("keyup", onKeyUp);
+    return () => {
+      document.removeEventListener("click", onMouseClick);
+      document.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("keyup", onKeyUp);
+    };
+  }, []);
+
+  const isMovingInSameDirection = () => {
+    return (
+      (moveLeft || moveRight || moveForward || moveBackward) &&
+      prevDirection == direction
+    );
+  };
 
   const isMoving = () => {
     return moveLeft || moveRight || moveForward || moveBackward;
@@ -84,9 +163,11 @@ function ReactThreeCanvas() {
     (controlRef.current as any).moveRight(rightVal);
     (controlRef.current as any).moveForward(-fwdVal);
     raycaster.ray.origin.copy((controlRef.current as any).getObject().position);
+    //raycaster.ray.direction.copy(direction);
     (controlRef.current as any).moveRight(-rightVal);
     (controlRef.current as any).moveForward(fwdVal);
     const intersections = raycaster.intersectObjects(planeRef.current, false);
+    prevDirection = direction;
     if (isMoving() && intersections.length == 0) {
       (controlRef.current as any).moveRight(rightVal);
       (controlRef.current as any).moveForward(-fwdVal);
@@ -94,7 +175,23 @@ function ReactThreeCanvas() {
       direction = oldDirection;
       velocity = oldVelocity;
     }
-    if (intersections.length) console.log("collided");
+    if (pointerRef && pointerRef.current) {
+      const distanceFromCamera = 0.1; // 3 units
+      const target = new THREE.Vector3(0, 0, -distanceFromCamera);
+      target.applyMatrix4(camera.matrixWorld);
+      if ((pointerRef.current as any).position != target) {
+        (pointerRef.current as any).position.lerp(target, 1);
+        //(pointerRef.current as any).position.set(target);
+      }
+      /*(pointerRef.current as any).position.lerp(
+        (controlRef.current as any).getObject().position,
+        1
+      );*/
+      //setPosition((controlRef.current as any).getObject().position);
+    }
+    /*(pointerRef.current as any).position = (
+      controlRef.current as any
+    ).getObject().position;*/
   };
 
   moveCamera();
@@ -147,9 +244,6 @@ function ReactThreeCanvas() {
     }
   };
 
-  document.addEventListener("keydown", onKeyDown);
-  document.addEventListener("keyup", onKeyUp);
-
   return (
     <>
       <ambientLight intensity={0.1} />
@@ -165,17 +259,23 @@ function ReactThreeCanvas() {
           receiveShadow={true}
           name={"ground"}
         />
+        <Sphere
+          args={[0.001]}
+          position={position}
+          ref={pointerRef}
+          material={pointerMaterial}
+        />
         <Plane
           args={[5, 200]}
-          rotation={[0, 2.5, Math.PI / 2]}
-          position={[0, zOffset, -50]}
+          rotation={[0, 0, Math.PI / 2]}
+          position={[0, 2.5 + zOffset, -50]}
           material={planeMaterial}
           receiveShadow={true}
           ref={(element) => ((planeRef as any).current[0] = element)}
         />
       </Suspense>
       <PointerLockControls
-        position={[0, 15, 0]}
+        position={[0, 0, 0]}
         ref={controlRef}
         camera={camera}
         minPolarAngle={Math.PI / 2 - 1}
