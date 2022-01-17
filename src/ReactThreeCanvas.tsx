@@ -6,6 +6,7 @@ import React, {
   useState,
 } from "react";
 import {
+  Circle,
   Environment,
   FirstPersonControls,
   Loader,
@@ -15,6 +16,7 @@ import {
   Point,
   PointerLockControls,
   Points,
+  Segments,
   Sphere,
   useGLTF,
 } from "@react-three/drei";
@@ -26,7 +28,6 @@ import * as THREE from "three";
 function ReactThreeCanvas() {
   let planeRef = useRef([]);
   let controlRef = useRef(null);
-  let pointerRef = useRef(null);
   const [position, setPosition] = useState(new THREE.Vector3(0, 0, 0));
   (window as any).pos = new THREE.Vector3(0, 0, 0);
   let mousePos = { x: 0, y: 0 };
@@ -43,8 +44,18 @@ function ReactThreeCanvas() {
   pointerMaterial.side = THREE.BackSide;
   pointerMaterial.color = new THREE.Color("yellow");
 
+  let circleMaterial = new THREE.MeshPhongMaterial();
+  circleMaterial.side = THREE.DoubleSide;
+  circleMaterial.color = new THREE.Color("blue");
+
+  const geometry = new THREE.SphereGeometry(0.03, 32, 16);
+  const material = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+  const pointer = new THREE.Mesh(geometry, material);
+  pointer.position.copy(new THREE.Vector3(0, 0, -5));
+  pointer.name = "pointer";
+  let pointerRef = pointer;
+
   const zOffset = 0.01;
-  const objects: any[] = [];
   const velocityVal = 200;
 
   let prevTime = performance.now();
@@ -58,8 +69,6 @@ function ReactThreeCanvas() {
     moveLeft = false,
     moveRight = false;
 
-  let canJump = false;
-
   let velocity = new THREE.Vector3();
   let direction = new THREE.Vector3();
   let prevDirection = new THREE.Vector3(0, 1, 0);
@@ -72,22 +81,6 @@ function ReactThreeCanvas() {
   );
   raycaster.camera = camera;
 
-  /*var vec = new THREE.Vector3();
-  var pos = new THREE.Vector3();
-  document.addEventListener("mousemove", (event: any) => {
-    mousePos.x = (event.clientX / window.innerWidth) * 2 - 1;
-    mousePos.y = -(event.clientY / window.innerHeight) * 2 + 1;
-    vec.set(
-      (event.clientX / window.innerWidth) * 2 - 1,
-      -(event.clientY / window.innerHeight) * 2 + 1,
-      0.5
-    );
-    vec.unproject(camera);
-    vec.sub(camera.position).normalize();
-    var distance = -camera.position.z / vec.z;
-    pos.copy(camera.position).add(vec.multiplyScalar(distance));
-  });*/
-
   let raycaster1 = new THREE.Raycaster();
   function onMouseClick(event: any) {
     if (
@@ -95,8 +88,7 @@ function ReactThreeCanvas() {
       controlRef.current &&
       (controlRef.current as any).isLocked
     ) {
-      let vec3 = (pointerRef.current as any).position.project(camera);
-      let vec = new THREE.Vector2(vec3.x, vec3.y);
+      let vec = new THREE.Vector2(pointerRef.position.x, pointerRef.position.y);
       raycaster1.setFromCamera(vec, camera);
       /*scene.add(
         new THREE.ArrowHelper(
@@ -108,7 +100,6 @@ function ReactThreeCanvas() {
       );*/
       var isIntersected = raycaster1.intersectObjects(scene.children, true);
       if (isIntersected) {
-        console.log("Mesh clicked!");
         if (
           isIntersected.length > 1 &&
           (isIntersected[1].object as any).onTrigger
@@ -119,10 +110,16 @@ function ReactThreeCanvas() {
   }
 
   useEffect(() => {
+    camera.add(pointerRef);
+    scene.add(camera);
+    console.log(pointerRef);
+    console.log(camera);
     document.addEventListener("click", onMouseClick);
     document.addEventListener("keydown", onKeyDown);
     document.addEventListener("keyup", onKeyUp);
     return () => {
+      camera.remove(pointerRef);
+      scene.remove(camera);
       document.removeEventListener("click", onMouseClick);
       document.removeEventListener("keydown", onKeyDown);
       document.removeEventListener("keyup", onKeyUp);
@@ -179,23 +176,7 @@ function ReactThreeCanvas() {
       direction = oldDirection;
       velocity = oldVelocity;
     }
-    if (pointerRef && pointerRef.current) {
-      const distanceFromCamera = 0.1; // 3 units
-      const target = new THREE.Vector3(0, 0, -distanceFromCamera);
-      target.applyMatrix4(camera.matrixWorld);
-      if ((pointerRef.current as any).position != target) {
-        (pointerRef.current as any).position.lerp(target, 1);
-        //(pointerRef.current as any).position.set(target);
-      }
-      /*(pointerRef.current as any).position.lerp(
-        (controlRef.current as any).getObject().position,
-        1
-      );*/
-      //setPosition((controlRef.current as any).getObject().position);
-    }
-    /*(pointerRef.current as any).position = (
-      controlRef.current as any
-    ).getObject().position;*/
+    //pointerRef.visible = !isMoving();
   };
 
   moveCamera();
@@ -263,12 +244,6 @@ function ReactThreeCanvas() {
           receiveShadow={true}
           name={"ground"}
         />
-        <Sphere
-          args={[0.001]}
-          position={position}
-          ref={pointerRef}
-          material={pointerMaterial}
-        />
         <Plane
           args={[5, 200]}
           rotation={[0, 0, Math.PI / 2]}
@@ -276,6 +251,7 @@ function ReactThreeCanvas() {
           material={planeMaterial}
           receiveShadow={true}
           ref={(element) => ((planeRef as any).current[0] = element)}
+          name="wall"
         />
       </Suspense>
       <PointerLockControls
@@ -289,31 +265,4 @@ function ReactThreeCanvas() {
   );
 }
 
-/*
-
-        <Plane
-          args={[200, 200]}
-          position={[-100, 100 + zOffset, 0]}
-          rotation={[0, Math.PI / 2, 0]}
-          material={planeMaterial}
-          receiveShadow={true}
-          ref={(element) => ((planeRef as any).current[1] = element)}
-        />
-        <Plane
-          args={[200, 200]}
-          rotation={[0, 0, Math.PI / 2]}
-          position={[0, 100 + zOffset, 100]}
-          material={planeMaterial}
-          receiveShadow={true}
-          ref={(element) => ((planeRef as any).current[2] = element)}
-        />
-        <Plane
-          args={[200, 200]}
-          rotation={[0, 0, Math.PI / 2]}
-          position={[0, 100 + zOffset, -100]}
-          material={planeMaterial}
-          receiveShadow={true}
-          ref={(element) => ((planeRef as any).current[3] = element)}
-        />
-*/
 export default ReactThreeCanvas;

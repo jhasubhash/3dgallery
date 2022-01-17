@@ -5,6 +5,7 @@ import ReactThreeCanvas from "./ReactThreeCanvas";
 import { Loader } from "@react-three/drei";
 //import Loader from "./Loader";
 //import testHdr from './assets/models/test.hdr'
+import * as THREE from "three";
 
 const MainWrapper = styled.div`
   text-align: center;
@@ -25,7 +26,7 @@ function ReactThreeLoader() {
   );
   camera.position.y = 2;
   camera.position.z = 20;*/
-
+  //const pointer = new THREE.Sphere(new THREE.Vector3(0, 0, -5), 0.2);
   return (
     <>
       <Canvas
